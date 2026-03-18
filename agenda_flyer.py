@@ -6,7 +6,28 @@ agenda_flyer.py  v8 — Story Mobile First
 - Fuentes grandes legibles en mobile
 - Cursiva en título y headers de día
 """
+def _ensure_fonts():
+    """Descarga fuentes si no existen localmente."""
+    import urllib.request, os
+    os.makedirs("fonts", exist_ok=True)
+    
+    URLS = {
+        "fonts/Bold.ttf":       "https://github.com/google/fonts/raw/refs/heads/main/ofl/barlowcondensed/BarlowCondensed-Bold.ttf",
+        "fonts/BoldItalic.ttf": "https://github.com/google/fonts/raw/refs/heads/main/ofl/barlowcondensed/BarlowCondensed-BoldItalic.ttf",
+        "fonts/Regular.ttf":    "https://github.com/google/fonts/raw/refs/heads/main/ofl/barlowcondensed/BarlowCondensed-Regular.ttf",
+        "fonts/Italic.ttf":     "https://github.com/google/fonts/raw/refs/heads/main/ofl/barlowcondensed/BarlowCondensed-Italic.ttf",
+        "fonts/Serif.ttf":      "https://github.com/google/fonts/raw/refs/heads/main/ofl/lora/Lora%5Bwght%5D.ttf",
+        "fonts/SerifBold.ttf":  "https://github.com/google/fonts/raw/refs/heads/main/ofl/lora/Lora%5Bwght%5D.ttf",
+    }
+    for path, url in URLS.items():
+        if not Path(path).exists():
+            try:
+                urllib.request.urlretrieve(url, path)
+                print(f"  [fonts] descargado {path}")
+            except Exception as e:
+                print(f"  [fonts] no se pudo descargar {path}: {e}")
 
+_ensure_fonts()  # llamar al importar
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 from pathlib import Path
