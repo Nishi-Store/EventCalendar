@@ -1,4 +1,3 @@
-
 """
 app.py — Generador de Agenda Semanal
 =====================================
@@ -63,20 +62,59 @@ st.markdown("""
         font-size: 1.6rem; margin-bottom: 1.5rem; text-align: center;
     }
 
+    /* Labels de todos los inputs */
     .stTextInput > label, .stDateInput > label,
-    .stSelectbox > label, .stMultiSelect > label {
-        color: #b9b2a5 !important; font-size: 0.85rem !important;
-        font-weight: 500 !important; letter-spacing: 0.05em !important;
+    .stSelectbox > label, .stMultiSelect > label,
+    label[data-testid="stWidgetLabel"],
+    label[data-testid="stWidgetLabel"] p {
+        color: #b9b2a5 !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.05em !important;
         text-transform: uppercase !important;
     }
-    .stTextInput input {
+
+    /* Inputs de texto */
+    .stTextInput input,
+    input[type="text"], input[type="password"] {
         background: rgba(10,10,16,0.8) !important;
         border: 1px solid rgba(91,157,213,0.3) !important;
-        border-radius: 8px !important; color: #f2ede1 !important;
+        border-radius: 8px !important;
+        color: #f2ede1 !important;
+        font-size: 1.05rem !important;
+        padding: 0.6rem 0.8rem !important;
     }
-    .stTextInput input:focus {
+    .stTextInput input:focus,
+    input[type="text"]:focus, input[type="password"]:focus {
         border-color: #5b9dd5 !important;
         box-shadow: 0 0 0 2px rgba(91,157,213,0.15) !important;
+    }
+
+    /* Date input */
+    .stDateInput input {
+        background: rgba(10,10,16,0.8) !important;
+        border: 1px solid rgba(91,157,213,0.3) !important;
+        border-radius: 8px !important;
+        color: #f2ede1 !important;
+        font-size: 1.05rem !important;
+    }
+
+    /* Caption / texto pequeño */
+    .stCaption, .stCaption p,
+    [data-testid="stCaptionContainer"] p {
+        color: #b9b2a5 !important;
+        font-size: 0.95rem !important;
+    }
+
+    /* Texto general en la app */
+    .stMarkdown p, .stText {
+        font-size: 1rem !important;
+        color: #f2ede1 !important;
+    }
+
+    /* Mensajes de error / success */
+    .stAlert p {
+        font-size: 1rem !important;
     }
 
     .stButton > button {
@@ -120,9 +158,7 @@ st.markdown("""
 
 # ── Credenciales desde variables de entorno (st.secrets) ─────────────────────
 # Definir en .streamlit/secrets.toml o en Streamlit Cloud → Settings → Secrets
-USUARIOS = {
-    st.secrets["APP_USER"]: st.secrets["APP_PASSWORD"]
-}
+
 
 SHEET_URL_DEFAULT = st.secrets["SHEET_URL"]
 
@@ -142,7 +178,7 @@ def lunes_de(d: date) -> date:
 
 
 # ── Estado ────────────────────────────────────────────────────────────────────
-for k, v in [("autenticado", False), ("flyer_bytes", None), ("flyer_nombre", "agenda.png")]:
+for k, v in [("flyer_bytes", None), ("flyer_nombre", "agenda.png")]:
     if k not in st.session_state:
         st.session_state[k] = v
 
@@ -154,33 +190,11 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# LOGIN
-# ══════════════════════════════════════════════════════════════════════════════
-if not st.session_state.autenticado:
-    st.markdown('<div class="login-card"><h2>Iniciar sesión</h2>', unsafe_allow_html=True)
-    usuario = st.text_input("Usuario", placeholder="CuevaNishiVictory")
-    clave   = st.text_input("Contraseña", type="password", placeholder="••••••••")
-    if st.button("Entrar →"):
-        if USUARIOS.get(usuario) == clave:
-            st.session_state.autenticado = True
-            st.rerun()
-        else:
-            st.error("Usuario o contraseña incorrectos.")
-    st.markdown('</div>', unsafe_allow_html=True)
-    st.stop()
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # APP PRINCIPAL
 # ══════════════════════════════════════════════════════════════════════════════
-
-# Cerrar sesión
-_, col_out = st.columns([6, 1])
-with col_out:
-    if st.button("Salir"):
-        st.session_state.autenticado = False
-        st.session_state.flyer_bytes = None
-        st.rerun()
 
 st.markdown("---")
 

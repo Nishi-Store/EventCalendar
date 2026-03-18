@@ -62,9 +62,47 @@ RGAP     = 14    # gap entre tarjetas
 # ── Resolución de fuentes cross-platform ─────────────────────────────────────
 
 def _resolver_fuentes() -> dict:
-    import platform, glob
+    """
+    Busca fuentes en este orden de prioridad:
+      1. Carpeta ./fonts/ local (incluida en el repo) — CONSISTENTE en todos los OS
+      2. Fuentes del sistema (Windows / macOS / Linux)
+      3. PIL default como último recurso
+
+    Para garantizar consistencia visual, descarga estas fuentes y ponlas en ./fonts/:
+      bold        → fonts/Bold.ttf        (ej: Barlow-Bold.ttf, Oswald-Bold.ttf)
+      bold_i      → fonts/BoldItalic.ttf
+      regular     → fonts/Regular.ttf
+      regular_i   → fonts/Italic.ttf
+      serif       → fonts/Serif.ttf       (ej: Lora-Regular.ttf)
+      serbold     → fonts/SerifBold.ttf
+
+    Fuentes recomendadas (Google Fonts, licencia OFL):
+      Sans: Barlow Condensed  https://fonts.google.com/specimen/Barlow+Condensed
+      Serif: Lora             https://fonts.google.com/specimen/Lora
+    """
+    import platform, glob as _glob
+
     system = platform.system()
-    candidates = {
+
+    # ── 1. Fuentes locales en ./fonts/ (máxima prioridad) ─────────────────────
+    LOCAL = {
+        "bold":     ["fonts/Bold.ttf", "fonts/BoldItalic.ttf",
+                     "fonts/Barlow_Condensed/BarlowCondensed-Bold.ttf",
+                     "fonts/Oswald-Bold.ttf"],
+        "bold_i":   ["fonts/BoldItalic.ttf",
+                     "fonts/Barlow_Condensed/BarlowCondensed-BoldItalic.ttf",
+                     "fonts/Oswald-Bold.ttf"],
+        "regular":  ["fonts/Regular.ttf",
+                     "fonts/Barlow_Condensed/BarlowCondensed-Regular.ttf",
+                     "fonts/Oswald-Regular.ttf"],
+        "regular_i":["fonts/Italic.ttf",
+                     "fonts/Barlow_Condensed/BarlowCondensed-Italic.ttf"],
+        "serif":    ["fonts/Serif.ttf", "fonts/Lora/Lora-Regular.ttf"],
+        "serbold":  ["fonts/SerifBold.ttf", "fonts/Lora/Lora-Bold.ttf"],
+    }
+
+    # ── 2. Fuentes del sistema ─────────────────────────────────────────────────
+    SYSTEM = {
         "Windows": {
             "bold":     ["C:/Windows/Fonts/arialbd.ttf", "C:/Windows/Fonts/calibrib.ttf"],
             "bold_i":   ["C:/Windows/Fonts/arialbi.ttf", "C:/Windows/Fonts/calibriz.ttf"],
@@ -74,12 +112,18 @@ def _resolver_fuentes() -> dict:
             "serbold":  ["C:/Windows/Fonts/georgiab.ttf", "C:/Windows/Fonts/timesbd.ttf"],
         },
         "Darwin": {
-            "bold":     ["/Library/Fonts/Arial Bold.ttf"],
-            "bold_i":   ["/Library/Fonts/Arial Bold Italic.ttf"],
-            "regular":  ["/Library/Fonts/Arial.ttf"],
-            "regular_i":["/Library/Fonts/Arial Italic.ttf"],
-            "serif":    ["/Library/Fonts/Georgia.ttf"],
-            "serbold":  ["/Library/Fonts/Georgia Bold.ttf"],
+            "bold":     ["/Library/Fonts/Arial Bold.ttf",
+                         "/System/Library/Fonts/Supplemental/Arial Bold.ttf"],
+            "bold_i":   ["/Library/Fonts/Arial Bold Italic.ttf",
+                         "/System/Library/Fonts/Supplemental/Arial Bold Italic.ttf"],
+            "regular":  ["/Library/Fonts/Arial.ttf",
+                         "/System/Library/Fonts/Supplemental/Arial.ttf"],
+            "regular_i":["/Library/Fonts/Arial Italic.ttf",
+                         "/System/Library/Fonts/Supplemental/Arial Italic.ttf"],
+            "serif":    ["/Library/Fonts/Georgia.ttf",
+                         "/System/Library/Fonts/Supplemental/Georgia.ttf"],
+            "serbold":  ["/Library/Fonts/Georgia Bold.ttf",
+                         "/System/Library/Fonts/Supplemental/Georgia Bold.ttf"],
         },
         "Linux": {
             "bold":     ["/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-Bold.ttf",
@@ -96,29 +140,81 @@ def _resolver_fuentes() -> dict:
                          "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf"],
         },
     }
+
     resolved = {}
-    pool = candidates.get(system, candidates["Linux"])
-    for role in ["bold","bold_i","regular","regular_i","serif","serbold"]:
+    sys_pool = SYSTEM.get(system, SYSTEM["Linux"])
+
+    for role in ["bold", "bold_i", "regular", "regular_i", "serif", "serbold"]:
         found = None
-        for path in pool.get(role, []):
+
+        # Primero: local
+        for path in LOCAL.get(role, []):
             if Path(path).exists():
-                found = path; break
-        if found is None:
-            pat = {"Windows":"C:/Windows/Fonts/*.ttf","Darwin":"/Library/Fonts/*.ttf",
-                   "Linux":"/usr/share/fonts/**/*.ttf"}.get(system,"/usr/share/fonts/**/*.ttf")
-            kw  = {"bold":"bold","bold_i":"oblique","regular":"regular",
-                   "regular_i":"oblique","serif":"serif","serbold":"serif"}[role]
-            import glob as _glob
+                found = path
+                break
+
+        # Segundo: sistema
+        if not found:
+            for path in sys_pool.get(role, []):
+                if Path(path).exists():
+                    found = path
+                    break
+
+        # Tercero: glob del sistema
+        if not found:
+            pat = {"Windows": "C:/Windows/Fonts/*.ttf",
+                   "Darwin":  "/Library/Fonts/*.ttf",
+                   "Linux":   "/usr/share/fonts/**/*.ttf"}.get(system, "/usr/share/fonts/**/*.ttf")
+            kw  = {"bold": "bold", "bold_i": "oblique", "regular": "regular",
+                   "regular_i": "oblique", "serif": "serif", "serbold": "serif"}[role]
             hits = _glob.glob(pat, recursive=True)
             matches = [f for f in hits if kw in Path(f).name.lower()]
-            if matches: found = matches[0]
+            if matches:
+                found = matches[0]
+
         resolved[role] = found
+
+    # Indicar fuente de cada rol
     print(f"[agenda_flyer] OS: {system}")
     for k, v in resolved.items():
-        print(f"  {k:10s} -> {v or 'PIL default'}")
+        src = "LOCAL" if v and v.startswith("fonts/") else "SYSTEM"
+        print(f"  {k:10s} [{src}] -> {v or 'PIL default'}")
     return resolved
 
 
+def _ensure_fonts():
+    """
+    Descarga Barlow Condensed + Lora desde GitHub si no existen en ./fonts/.
+    Se ejecuta al importar el módulo — primera vez tarda ~2s, luego es instantáneo.
+    """
+    import urllib.request, os
+    os.makedirs("fonts", exist_ok=True)
+
+    URLS = {
+        "fonts/Bold.ttf":       "https://github.com/google/fonts/raw/main/ofl/barlowcondensed/BarlowCondensed-Bold.ttf",
+        "fonts/BoldItalic.ttf": "https://github.com/google/fonts/raw/main/ofl/barlowcondensed/BarlowCondensed-BoldItalic.ttf",
+        "fonts/Regular.ttf":    "https://github.com/google/fonts/raw/main/ofl/barlowcondensed/BarlowCondensed-Regular.ttf",
+        "fonts/Italic.ttf":     "https://github.com/google/fonts/raw/main/ofl/barlowcondensed/BarlowCondensed-Italic.ttf",
+        "fonts/Serif.ttf":      "https://github.com/google/fonts/raw/main/ofl/lora/Lora%5Bwght%5D.ttf",
+        "fonts/SerifBold.ttf":  "https://github.com/google/fonts/raw/main/ofl/lora/Lora%5Bwght%5D.ttf",
+    }
+
+    all_present = all(Path(p).exists() for p in URLS)
+    if all_present:
+        return  # nada que hacer
+
+    print("[fonts] Descargando fuentes...")
+    for path, url in URLS.items():
+        if Path(path).exists():
+            continue
+        try:
+            urllib.request.urlretrieve(url, path)
+            print(f"  ✓ {path}")
+        except Exception as e:
+            print(f"  ✗ {path}: {e} — se usará fuente del sistema como fallback")
+
+
+_ensure_fonts()
 FONT = _resolver_fuentes()
 
 
@@ -490,3 +586,74 @@ def generar_agenda(
     canvas.save(output, "PNG")
     print(f"✅  {output}  ({W}×{H}px)")
     return output
+
+
+# ── DATOS ─────────────────────────────────────────────────────────────────────
+
+SEMANA = {
+    "LUNES 23": [
+        {"nombre": "Altered TCG",
+         "hora": "3:00 – 6:00 PM", "descripcion": "Partidas abiertas",
+         "imagen": "altered.png"},
+        {"nombre": "Warhammer 40K",
+         "hora": "3:00 – 6:00 PM", "descripcion": "Batallas y pintura de minis",
+         "imagen": "40k.png"},
+        {"nombre": "Día del Virus",
+         "hora": "Todo el día",
+         "descripcion": "Juegos de mesa + nuevo juego en tienda",
+         "imagen": "virus.png"},
+    ],
+    "MARTES": [
+        {"nombre": "Calabozos y Dragones",
+         "hora": "3:00 – 6:00 PM", "descripcion": "Campaña Oneshot semanal abierta",
+         "imagen": "DnD.png"},
+    ],
+    "MIÉRCOLES": [
+        {"nombre": "Pokémon TCG",
+         "hora": "3:00 – 6:00 PM", "descripcion": "Torneos y casual",
+         "imagen": "Playpkmn.png"},
+        {"nombre": "D&D",
+         "hora": "3:00 – 6:00 PM", "descripcion": "Mesa abierta",
+         "imagen": "DnD.png"},
+    ],
+    "JUEVES": [],
+    "VIERNES": [
+        {"nombre": "Bingo",
+         "hora": "6:00 – 9:00 PM", "descripcion": "Premios y diversión",
+         "imagen": "Cueva.png"},
+        {"nombre": "Juegos de Mesa",
+         "hora": "3:00 – 9:00 PM", "descripcion": "Gran variedad de títulos",
+         "imagen": "Cueva.png"},
+    ],
+    "SÁBADO": [
+        {"nombre": "Magic: The Gathering",
+         "hora": "3:00 – 6:00 PM", "descripcion": "Commander Party",
+         "imagen": "MTG.png"},
+        {"nombre": "TCGs Abierto",
+         "hora": "3:00 – 6:00 PM", "descripcion": "Altered, Lorcana y más",
+         "imagen": "Nishi.png"},
+        {"nombre": "Calabozos y Dragones",
+         "hora": "3:00 – 6:00 PM", "descripcion": "Mesa de campaña Tomb of Horrors",
+         "imagen": "DnD.png"},
+    ],
+    "DOMINGO": [
+        {"nombre": "Yu-Gi-Oh!",
+         "hora": "2:45 – 6:00 PM", "descripcion": "Torneo Avanzado",
+         "imagen": "OTS.png"},
+        {"nombre": "Día de Pintura",
+         "hora": "3:00 – 6:00 PM", "descripcion": "Miniaturas Warhammer",
+         "imagen": "Cueva.png"},
+    ],
+}
+
+if __name__ == "__main__":
+    generar_agenda(
+        semana=SEMANA,
+        logos=["Nishi.png", "Cueva.png", "Victory.png"],
+        output="agenda_semanal.png",
+        titulo="AGENDA SEMANAL",
+        semana_label="Mar. 23 – 29, 2026",
+        week_start="2026-03-23",
+        direccion="Av. 12E # 2-100 Quinta Oriental",
+        subtitulo="Cueva del Búho · Victory Road · Nishi",
+    )
