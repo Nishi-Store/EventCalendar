@@ -62,20 +62,59 @@ st.markdown("""
         font-size: 1.6rem; margin-bottom: 1.5rem; text-align: center;
     }
 
+    /* Labels de todos los inputs */
     .stTextInput > label, .stDateInput > label,
-    .stSelectbox > label, .stMultiSelect > label {
-        color: #b9b2a5 !important; font-size: 0.85rem !important;
-        font-weight: 500 !important; letter-spacing: 0.05em !important;
+    .stSelectbox > label, .stMultiSelect > label,
+    label[data-testid="stWidgetLabel"],
+    label[data-testid="stWidgetLabel"] p {
+        color: #b9b2a5 !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.05em !important;
         text-transform: uppercase !important;
     }
-    .stTextInput input {
+
+    /* Inputs de texto */
+    .stTextInput input,
+    input[type="text"], input[type="password"] {
         background: rgba(10,10,16,0.8) !important;
         border: 1px solid rgba(91,157,213,0.3) !important;
-        border-radius: 8px !important; color: #f2ede1 !important;
+        border-radius: 8px !important;
+        color: #f2ede1 !important;
+        font-size: 1.05rem !important;
+        padding: 0.6rem 0.8rem !important;
     }
-    .stTextInput input:focus {
+    .stTextInput input:focus,
+    input[type="text"]:focus, input[type="password"]:focus {
         border-color: #5b9dd5 !important;
         box-shadow: 0 0 0 2px rgba(91,157,213,0.15) !important;
+    }
+
+    /* Date input */
+    .stDateInput input {
+        background: rgba(10,10,16,0.8) !important;
+        border: 1px solid rgba(91,157,213,0.3) !important;
+        border-radius: 8px !important;
+        color: #f2ede1 !important;
+        font-size: 1.05rem !important;
+    }
+
+    /* Caption / texto pequeño */
+    .stCaption, .stCaption p,
+    [data-testid="stCaptionContainer"] p {
+        color: #b9b2a5 !important;
+        font-size: 0.95rem !important;
+    }
+
+    /* Texto general en la app */
+    .stMarkdown p, .stText {
+        font-size: 1rem !important;
+        color: #f2ede1 !important;
+    }
+
+    /* Mensajes de error / success */
+    .stAlert p {
+        font-size: 1rem !important;
     }
 
     .stButton > button {
