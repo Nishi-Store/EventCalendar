@@ -119,9 +119,7 @@ st.markdown("""
 
 # ── Credenciales desde variables de entorno (st.secrets) ─────────────────────
 # Definir en .streamlit/secrets.toml o en Streamlit Cloud → Settings → Secrets
-USUARIOS = {
-    st.secrets["APP_USER"]: st.secrets["APP_PASSWORD"]
-}
+
 
 SHEET_URL_DEFAULT = st.secrets["SHEET_URL"]
 
