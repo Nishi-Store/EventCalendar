@@ -1,4 +1,3 @@
-
 """
 app.py — Generador de Agenda Semanal
 =====================================
@@ -142,7 +141,7 @@ def lunes_de(d: date) -> date:
 
 
 # ── Estado ────────────────────────────────────────────────────────────────────
-for k, v in [("autenticado", False), ("flyer_bytes", None), ("flyer_nombre", "agenda.png")]:
+for k, v in [("flyer_bytes", None), ("flyer_nombre", "agenda.png")]:
     if k not in st.session_state:
         st.session_state[k] = v
 
@@ -154,33 +153,11 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# LOGIN
-# ══════════════════════════════════════════════════════════════════════════════
-if not st.session_state.autenticado:
-    st.markdown('<div class="login-card"><h2>Iniciar sesión</h2>', unsafe_allow_html=True)
-    usuario = st.text_input("Usuario", placeholder="CuevaNishiVictory")
-    clave   = st.text_input("Contraseña", type="password", placeholder="••••••••")
-    if st.button("Entrar →"):
-        if USUARIOS.get(usuario) == clave:
-            st.session_state.autenticado = True
-            st.rerun()
-        else:
-            st.error("Usuario o contraseña incorrectos.")
-    st.markdown('</div>', unsafe_allow_html=True)
-    st.stop()
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # APP PRINCIPAL
 # ══════════════════════════════════════════════════════════════════════════════
-
-# Cerrar sesión
-_, col_out = st.columns([6, 1])
-with col_out:
-    if st.button("Salir"):
-        st.session_state.autenticado = False
-        st.session_state.flyer_bytes = None
-        st.rerun()
 
 st.markdown("---")
 
