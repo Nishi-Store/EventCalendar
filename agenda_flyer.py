@@ -62,47 +62,9 @@ RGAP     = 14    # gap entre tarjetas
 # ── Resolución de fuentes cross-platform ─────────────────────────────────────
 
 def _resolver_fuentes() -> dict:
-    """
-    Busca fuentes en este orden de prioridad:
-      1. Carpeta ./fonts/ local (incluida en el repo) — CONSISTENTE en todos los OS
-      2. Fuentes del sistema (Windows / macOS / Linux)
-      3. PIL default como último recurso
-
-    Para garantizar consistencia visual, descarga estas fuentes y ponlas en ./fonts/:
-      bold        → fonts/Bold.ttf        (ej: Barlow-Bold.ttf, Oswald-Bold.ttf)
-      bold_i      → fonts/BoldItalic.ttf
-      regular     → fonts/Regular.ttf
-      regular_i   → fonts/Italic.ttf
-      serif       → fonts/Serif.ttf       (ej: Lora-Regular.ttf)
-      serbold     → fonts/SerifBold.ttf
-
-    Fuentes recomendadas (Google Fonts, licencia OFL):
-      Sans: Barlow Condensed  https://fonts.google.com/specimen/Barlow+Condensed
-      Serif: Lora             https://fonts.google.com/specimen/Lora
-    """
-    import platform, glob as _glob
-
+    import platform, glob
     system = platform.system()
-
-    # ── 1. Fuentes locales en ./fonts/ (máxima prioridad) ─────────────────────
-    LOCAL = {
-        "bold":     ["fonts/Bold.ttf", "fonts/BoldItalic.ttf",
-                     "fonts/Barlow_Condensed/BarlowCondensed-Bold.ttf",
-                     "fonts/Oswald-Bold.ttf"],
-        "bold_i":   ["fonts/BoldItalic.ttf",
-                     "fonts/Barlow_Condensed/BarlowCondensed-BoldItalic.ttf",
-                     "fonts/Oswald-Bold.ttf"],
-        "regular":  ["fonts/Regular.ttf",
-                     "fonts/Barlow_Condensed/BarlowCondensed-Regular.ttf",
-                     "fonts/Oswald-Regular.ttf"],
-        "regular_i":["fonts/Italic.ttf",
-                     "fonts/Barlow_Condensed/BarlowCondensed-Italic.ttf"],
-        "serif":    ["fonts/Serif.ttf", "fonts/Lora/Lora-Regular.ttf"],
-        "serbold":  ["fonts/SerifBold.ttf", "fonts/Lora/Lora-Bold.ttf"],
-    }
-
-    # ── 2. Fuentes del sistema ─────────────────────────────────────────────────
-    SYSTEM = {
+    candidates = {
         "Windows": {
             "bold":     ["C:/Windows/Fonts/arialbd.ttf", "C:/Windows/Fonts/calibrib.ttf"],
             "bold_i":   ["C:/Windows/Fonts/arialbi.ttf", "C:/Windows/Fonts/calibriz.ttf"],
@@ -112,18 +74,12 @@ def _resolver_fuentes() -> dict:
             "serbold":  ["C:/Windows/Fonts/georgiab.ttf", "C:/Windows/Fonts/timesbd.ttf"],
         },
         "Darwin": {
-            "bold":     ["/Library/Fonts/Arial Bold.ttf",
-                         "/System/Library/Fonts/Supplemental/Arial Bold.ttf"],
-            "bold_i":   ["/Library/Fonts/Arial Bold Italic.ttf",
-                         "/System/Library/Fonts/Supplemental/Arial Bold Italic.ttf"],
-            "regular":  ["/Library/Fonts/Arial.ttf",
-                         "/System/Library/Fonts/Supplemental/Arial.ttf"],
-            "regular_i":["/Library/Fonts/Arial Italic.ttf",
-                         "/System/Library/Fonts/Supplemental/Arial Italic.ttf"],
-            "serif":    ["/Library/Fonts/Georgia.ttf",
-                         "/System/Library/Fonts/Supplemental/Georgia.ttf"],
-            "serbold":  ["/Library/Fonts/Georgia Bold.ttf",
-                         "/System/Library/Fonts/Supplemental/Georgia Bold.ttf"],
+            "bold":     ["/Library/Fonts/Arial Bold.ttf"],
+            "bold_i":   ["/Library/Fonts/Arial Bold Italic.ttf"],
+            "regular":  ["/Library/Fonts/Arial.ttf"],
+            "regular_i":["/Library/Fonts/Arial Italic.ttf"],
+            "serif":    ["/Library/Fonts/Georgia.ttf"],
+            "serbold":  ["/Library/Fonts/Georgia Bold.ttf"],
         },
         "Linux": {
             "bold":     ["/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-Bold.ttf",
@@ -140,45 +96,26 @@ def _resolver_fuentes() -> dict:
                          "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf"],
         },
     }
-
     resolved = {}
-    sys_pool = SYSTEM.get(system, SYSTEM["Linux"])
-
-    for role in ["bold", "bold_i", "regular", "regular_i", "serif", "serbold"]:
+    pool = candidates.get(system, candidates["Linux"])
+    for role in ["bold","bold_i","regular","regular_i","serif","serbold"]:
         found = None
-
-        # Primero: local
-        for path in LOCAL.get(role, []):
+        for path in pool.get(role, []):
             if Path(path).exists():
-                found = path
-                break
-
-        # Segundo: sistema
-        if not found:
-            for path in sys_pool.get(role, []):
-                if Path(path).exists():
-                    found = path
-                    break
-
-        # Tercero: glob del sistema
-        if not found:
-            pat = {"Windows": "C:/Windows/Fonts/*.ttf",
-                   "Darwin":  "/Library/Fonts/*.ttf",
-                   "Linux":   "/usr/share/fonts/**/*.ttf"}.get(system, "/usr/share/fonts/**/*.ttf")
-            kw  = {"bold": "bold", "bold_i": "oblique", "regular": "regular",
-                   "regular_i": "oblique", "serif": "serif", "serbold": "serif"}[role]
+                found = path; break
+        if found is None:
+            pat = {"Windows":"C:/Windows/Fonts/*.ttf","Darwin":"/Library/Fonts/*.ttf",
+                   "Linux":"/usr/share/fonts/**/*.ttf"}.get(system,"/usr/share/fonts/**/*.ttf")
+            kw  = {"bold":"bold","bold_i":"oblique","regular":"regular",
+                   "regular_i":"oblique","serif":"serif","serbold":"serif"}[role]
+            import glob as _glob
             hits = _glob.glob(pat, recursive=True)
             matches = [f for f in hits if kw in Path(f).name.lower()]
-            if matches:
-                found = matches[0]
-
+            if matches: found = matches[0]
         resolved[role] = found
-
-    # Indicar fuente de cada rol
     print(f"[agenda_flyer] OS: {system}")
     for k, v in resolved.items():
-        src = "LOCAL" if v and v.startswith("fonts/") else "SYSTEM"
-        print(f"  {k:10s} [{src}] -> {v or 'PIL default'}")
+        print(f"  {k:10s} -> {v or 'PIL default'}")
     return resolved
 
 
@@ -558,7 +495,7 @@ def generar_agenda(
 # ── DATOS ─────────────────────────────────────────────────────────────────────
 
 SEMANA = {
-    "LUNES 23": [
+    "LUNES": [
         {"nombre": "Altered TCG",
          "hora": "3:00 – 6:00 PM", "descripcion": "Partidas abiertas",
          "imagen": "altered.png"},
