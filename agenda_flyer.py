@@ -425,10 +425,19 @@ def generar_agenda(
 
     # Calcular H exacto
     COL_W_tmp  = (W - 2*GPAD - CGAP) // 2
-    _col_izq_h = sum(_altura_tarjeta(semana.get(_find_key(semana,d),[]), COL_W_tmp)
-                     for d in ["LUNES","MARTES","MIÉRCOLES","JUEVES"]) + RGAP*3
-    _col_der_h = sum(_altura_tarjeta(semana.get(_find_key(semana,d),[]), COL_W_tmp)
-                     for d in ["VIERNES","SÁBADO","DOMINGO"]) + RGAP*2
+    # Balanceo preliminar para calcular H (usando COL_W_tmp)
+    _DIAS_ORD = ["LUNES","MARTES","MIÉRCOLES","JUEVES","VIERNES","SÁBADO","DOMINGO"]
+    def _ch(dias, cw):
+        n = len(dias)
+        return sum(_altura_tarjeta(semana.get(_find_key(semana,d),[]), cw)
+                   for d in dias) + RGAP * max(0, n-1)
+    _best_diff, _best_split = float("inf"), 4
+    for _s in range(1, 7):
+        _d = abs(_ch(_DIAS_ORD[:_s], COL_W_tmp) - _ch(_DIAS_ORD[_s:], COL_W_tmp))
+        if _d < _best_diff:
+            _best_diff, _best_split = _d, _s
+    _col_izq_h = _ch(_DIAS_ORD[:_best_split], COL_W_tmp)
+    _col_der_h = _ch(_DIAS_ORD[_best_split:], COL_W_tmp)
     _HEADER_H  = 360
     _GRID_TOP  = _HEADER_H + 8 + 22
     H = _GRID_TOP + max(_col_izq_h, _col_der_h) + 20 + 160
@@ -469,8 +478,30 @@ def generar_agenda(
     GRID_TOP = DIV_Y + 22
     COL_W    = (W - 2*GPAD - CGAP) // 2
 
-    COL_IZQ = ["LUNES","MARTES","MIÉRCOLES","JUEVES"]
-    COL_DER = ["VIERNES","SÁBADO","DOMINGO"]
+    # ── Balanceo de columnas ──────────────────────────────────────────────────
+    # Prueba todos los puntos de corte secuenciales (split=1..6) y elige
+    # el que minimiza la diferencia de altura entre columnas.
+    DIAS_ORDEN = ["LUNES","MARTES","MIÉRCOLES","JUEVES","VIERNES","SÁBADO","DOMINGO"]
+
+    def _col_height(dias):
+        n = len(dias)
+        return sum(_altura_tarjeta(semana.get(_find_key(semana, d), []), COL_W)
+                   for d in dias) + RGAP * max(0, n - 1)
+
+    best_diff  = float("inf")
+    best_split = 4  # fallback: 4|3
+
+    for split in range(1, 7):
+        h_izq = _col_height(DIAS_ORDEN[:split])
+        h_der = _col_height(DIAS_ORDEN[split:])
+        diff  = abs(h_izq - h_der)
+        if diff < best_diff:
+            best_diff  = diff
+            best_split = split
+
+    COL_IZQ = DIAS_ORDEN[:best_split]
+    COL_DER = DIAS_ORDEN[best_split:]
+    print(f"  Columnas: {len(COL_IZQ)} días | {len(COL_DER)} días  (diff={best_diff}px)")
 
     F_DNAME  = fnt("bold_i", 30)
     F_HORA   = fnt("regular", 26)
@@ -556,10 +587,8 @@ def generar_agenda(
     dibujar_columna(COL_DER, GPAD + COL_W + CGAP)
 
     # ── FOOTER ────────────────────────────────────────────────────────────────
-    col_izq_h = sum(_altura_tarjeta(semana.get(_find_key(semana,d),[]), COL_W)
-                   for d in COL_IZQ) + RGAP*3
-    col_der_h = sum(_altura_tarjeta(semana.get(_find_key(semana,d),[]), COL_W)
-                   for d in COL_DER) + RGAP*2
+    col_izq_h = _col_height(COL_IZQ)
+    col_der_h = _col_height(COL_DER)
     FY = GRID_TOP + max(col_izq_h, col_der_h) + 20
 
     draw.rectangle([0, FY, W, H], fill=C["footer_bg"])
